@@ -2,7 +2,7 @@
 
 Bifunctors have been a hot topic in the Scala community since ZIO introduced the second type parameter.
 It's a great way to manage business errors in your code, but it lacks suitable abstractions.
-Most comprehensive set I've seen lies here https://github.com/7mind/izumi/tree/develop/fundamentals/fundamentals-bio/src/main/scala/izumi/functional/bio.
+The most comprehensive set I've seen lies [here](https://github.com/7mind/izumi/tree/develop/fundamentals/fundamentals-bio/src/main/scala/izumi/functional/bio).
 But it's built upon practical usage.
 So let's start building a more principled approach. 
 
