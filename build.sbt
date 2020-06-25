@@ -263,10 +263,15 @@ lazy val doobie      = project
   )
   .dependsOn(core, derivation, env % Test, zioInterop % Test)
 
+lazy val sim = project
+  .settings(
+    defaultSettings
+  ).dependsOn(core, concurrent, data)
+
 lazy val coreModules = Seq(higherKindCore, core, memo, env, concurrent, opticsCore, data)
 
 lazy val commonModules =
-  Seq(observable, opticsInterop, opticsMacro, logging, enums, config, derivation, zioInterop, fs2Interop, doobie)
+  Seq(observable, opticsInterop, opticsMacro, logging, enums, config, derivation, zioInterop, fs2Interop, doobie, sim)
 
 lazy val allModuleRefs = (coreModules ++ commonModules).map(x => x: ProjectReference)
 lazy val allModuleDeps = (coreModules ++ commonModules).map(x => x: ClasspathDep[ProjectReference])
