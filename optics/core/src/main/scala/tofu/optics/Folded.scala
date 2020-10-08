@@ -5,6 +5,8 @@ import cats.instances.vector._
 import cats.syntax.monoid._
 import cats.{Applicative, Foldable, Monoid}
 import tofu.optics.data._
+import tofu.compat._
+import tofu.data.{And, Or}
 
 /** S has some or none occurrences of A
   * and can collect them
@@ -12,8 +14,12 @@ import tofu.optics.data._
 trait PFolded[-S, +T, +A, -B] extends PBase[PFolded, S, T, A, B] { self =>
   def foldMap[X: Monoid](s: S)(f: A => X): X
 
-  def getAll(s: S): List[A]     = foldMap(s)(List(_))
-  def toVector(s: S): Vector[A] = foldMap(s)(Vector(_))
+  def getAll(s: S): List[A]        = foldMap(s)(List(_))
+  def toVector(s: S): Vector[A]    = foldMap(s)(Vector(_))
+  def toLazyList(s: S): LazySeq[A] = foldMap(s)(LazySeq(_))
+
+  def forAll(s: S)(p: A => Boolean): Boolean = foldMap(s)(And(_)).value
+  def exists(s: S)(p: A => Boolean): Boolean = foldMap(s)(Or(_)).value
 
   def as[B1, T1]: PFolded[S, T1, A, B1] = this.asInstanceOf[PFolded[S, T1, A, B1]]
 
