@@ -109,6 +109,21 @@ object CalcM extends CalcMInstances {
       Defer(() => runStep().translateState(translator))
   }
 
+  final case class Transformed[FL[+_, +_], RL, EL, AL, +F[+_, +_], -R, -SI, SM, +SO, +E, +A](
+      inner: CalcM[FL, RL, SI, SM, EL, AL],
+      transform: Transform[FL, RL, SI, EL, AL, F, R, SM, SO, E, A]
+  ) extends CalcM[F, R, SI, SO, E, A] {
+    type MidF[e, a] = FL[e, a]
+    type MidErr = EL
+    type MidVal = AL
+    type MidRead = RL
+    type MidState = SM
+    def translateState[G[+_, +_], ST, R1](
+        translator: Translator[F, G, ST, R, R1]
+    ): CalcM[G, R1, (ST, SI), (ST, SO), E, A]                                                               = ???
+    override def translate[G[+_, +_], R1](translator: ITranslator[F, G, R, R1]): CalcM[G, R1, SI, SO, E, A] = ???
+  }
+
   sealed trait ProvideM[+F[+_, +_], R, -S1, +S2, +E, +A] extends CalcM[F, R, S1, S2, E, A] {
     type R1
     def r: R1
@@ -177,14 +192,14 @@ object CalcM extends CalcMInstances {
   @tailrec
   def step[F[+_, +_], R, S1, S2, E, A](calc: CalcM[F, R, S1, S2, E, A], r: R, init: S1): StepResult[F, S2, E, A] =
     calc match {
-      case res: CalcMRes[R, S1, S2, E, A]            => res.submit(r, init, Continue.stepResult)
-      case d: Defer[F, R, S1, S2, E, A]              => step(d.runStep(), r, init)
-      case sub: Sub[F, S1, S2, E, A]                 =>
+      case res: CalcMRes[R, S1, S2, E, A]                      => res.submit(r, init, Continue.stepResult)
+      case d: Defer[F, R, S1, S2, E, A]                        => step(d.runStep(), r, init)
+      case sub: Sub[F, S1, S2, E, A]                           =>
         type Cont[-S] = Continue[A, E, Any, CalcM[Nothing, Any, S, S2, E, A]]
         val cont = sub.iss.substitute[Cont](Continue.result[A, E, S2])
         StepResult.Wrap[F, R, S1, S2, E, E, A, A](r, init, sub.fa, cont)
-      case p: Provide[F, r, S1, S2, E, A]            => step[F, r, S1, S2, E, A](p.inner, p.r, init)
-      case c1: Bound[F, R, S1, s1, S2, e1, E, a1, A] =>
+      case p: Provide[F, r, S1, S2, E, A]                      => step[F, r, S1, S2, E, A](p.inner, p.r, init)
+      case c1: Bound[F, R, S1, s1, S2, e1, E, a1, A]           =>
         c1.src match {
           case res: CalcMRes[R, S1, c1.MidState, e1, a1] =>
             val (sm, next) = res.submit(r, init, c1.continue.withState[s1])
@@ -200,6 +215,12 @@ object CalcM extends CalcMInstances {
             step(p.inner.bind[F, p.R1, E, S2, A](kcont), p.r, init)
           case c2: Bound[F, R, S1, s2, _, e2, _, a2, _]  =>
             step(c2.src.bind(Continue.compose(c2.continue, c1.continue)), r, init)
+        }
+      case t1: Transformed[fl, rl, el, al, F, R, S1, sm, S2, E, A] =>
+        t1.inner match {
+          case res: CalcMRes[R, S1, t1.MidState, e1, a1] =>
+            val (sm, next) = res.submit(r, init, t1.transform.withState[sm])
+            step[F, R, sm, S2, E, A](next, r, sm)
         }
     }
 }
